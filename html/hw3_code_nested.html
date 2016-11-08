@@ -1,0 +1,741 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>hw3_code_nested</title><meta name="generator" content="MATLAB 8.6"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2016-10-05"><meta name="DC.source" content="hw3_code_nested.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#2">Data Loading</a></li><li><a href="#3">Using Features themselves for ROC</a></li><li><a href="#4">For 5 different Algorithms</a></li><li><a href="#6">Nested CV to choose kernel for SVM</a></li><li><a href="#8">Nested CV to choose number of trees for RF</a></li><li><a href="#11">AUROC</a></li></ul></div><pre class="codeinput"><span class="comment">% Kyle Decker</span>
+<span class="comment">% Machine Learning</span>
+<span class="comment">% HW 3</span>
+
+close <span class="string">all</span>
+clc
+</pre><h2>Data Loading<a name="2"></a></h2><pre class="codeinput">f = fopen(<span class="string">'letter-recognition.data.txt'</span>);
+data0 = textscan(f,<span class="string">'%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f'</span>, 20000, <span class="string">'Delimiter'</span>,<span class="string">','</span>);
+fclose(f);
+data_all = cell2mat(data0(:,2:end));
+letter = cell2mat(data0{1,1});
+class_all = zeros(size(letter,1),1);
+class_all_B = (letter==<span class="string">'B'</span>); <span class="comment">% Classify B vs D</span>
+B_ind = find(class_all_B);
+class_all_D = (letter==<span class="string">'D'</span>);
+D_ind = find(class_all_D);
+
+data = cat(1,data_all(B_ind,:),data_all(D_ind,:));
+class = zeros(size(data,1),1);
+class(1:size(B_ind,1))=1; <span class="comment">% B = class 1</span>
+class = (class==1); <span class="comment">% make logical</span>
+
+
+<span class="comment">% data0 = csvread('wine.data.txt');</span>
+<span class="comment">% data = data0(:,2:end);</span>
+<span class="comment">% class = data0(:,1)&gt;2; % Make binary, wine 1 vs wine 2&amp;3</span>
+
+<span class="comment">% Random permutation of the dataset</span>
+rand_i = randperm(size(class,1));
+data_perm = data(rand_i,:);
+class_perm = class(rand_i);
+</pre><h2>Using Features themselves for ROC<a name="3"></a></h2><pre class="codeinput">AUROC_all = zeros(10,size(data_perm,2));
+
+<span class="keyword">for</span> test_ind = 1:10
+    p = 0.9; <span class="comment">% proportion of the dataset for training</span>
+    m = size(data,1);
+
+    <span class="comment">% Circ shift to create new test and training set</span>
+    data_perm = circshift(data_perm,round((1-p)*m),1);
+    class_perm = circshift(class_perm,round((1-p)*m),1);
+
+    X = data_perm(1:round(p*m),:);
+    Y = class_perm(1:round(p*m));
+    Xtest = data_perm(round(p*m)+1:end,:);
+    Ytest = class_perm(round(p*m)+1:end);
+
+    figure;
+    Yscores = Xtest(:,1);
+    [Xfeat,Yfeat,Tfeat,AUCfeat] = perfcurve(Ytest,Yscores,<span class="string">'true'</span>);
+    AUROC_all(test_ind,1) = AUCfeat;
+    plot(Xfeat, Yfeat)
+    hold <span class="string">on</span>
+    <span class="keyword">for</span> feat_ind = 2:size(Xtest,2)
+        <span class="comment">%feat_ind = 1;</span>
+        Yscores = Xtest(:,feat_ind);
+        [Xfeat,Yfeat,Tfeat,AUCfeat] = perfcurve(Ytest,Yscores,<span class="string">'true'</span>);
+        AUROC_all(test_ind,feat_ind) = AUCfeat;
+        plot(Xfeat, Yfeat)
+    <span class="keyword">end</span>
+    xlabel(<span class="string">'false positive rate'</span>);
+    ylabel(<span class="string">'true positive rate'</span>);
+    title_str = [<span class="string">'ROC Curves for Individual Features Test Set: '</span>,num2str(test_ind)];
+    title(title_str)
+    axis([-0.01,1.01,0,1.01])
+    legend(<span class="string">'F1'</span>, <span class="string">'F2'</span>, <span class="string">'F3'</span>, <span class="string">'F4'</span>, <span class="string">'F5'</span>, <span class="string">'F6'</span>, <span class="string">'F7'</span>, <span class="string">'F8'</span>, <span class="keyword">...</span>
+        <span class="string">'F9'</span>, <span class="string">'F10'</span>, <span class="string">'F11'</span>, <span class="string">'F12'</span>, <span class="string">'F13'</span>, <span class="string">'F14'</span>, <span class="string">'F15'</span>, <span class="string">'F16'</span>)
+    hold <span class="string">off</span>
+
+<span class="keyword">end</span>
+
+fprintf(<span class="string">'AUROC (mean +/- standard deviation) for\n'</span>);
+fprintf(<span class="string">'Feature 1: %f +/- %f\n'</span>, mean(AUROC_all(:,1)),std(AUROC_all(:,1)) );
+fprintf(<span class="string">'Feature 2: %f +/- %f\n'</span>, mean(AUROC_all(:,2)),std(AUROC_all(:,2)) );
+fprintf(<span class="string">'Feature 3: %f +/- %f\n'</span>, mean(AUROC_all(:,3)),std(AUROC_all(:,3)) );
+fprintf(<span class="string">'Feature 4: %f +/- %f\n'</span>, mean(AUROC_all(:,4)),std(AUROC_all(:,4)) );
+fprintf(<span class="string">'Feature 5: %f +/- %f\n'</span>, mean(AUROC_all(:,5)),std(AUROC_all(:,5)) );
+fprintf(<span class="string">'Feature 6: %f +/- %f\n'</span>, mean(AUROC_all(:,6)),std(AUROC_all(:,6)) );
+fprintf(<span class="string">'Feature 7: %f +/- %f\n'</span>, mean(AUROC_all(:,7)),std(AUROC_all(:,7)) );
+fprintf(<span class="string">'Feature 8: %f +/- %f\n'</span>, mean(AUROC_all(:,8)),std(AUROC_all(:,8)) );
+fprintf(<span class="string">'Feature 9: %f +/- %f\n'</span>, mean(AUROC_all(:,9)),std(AUROC_all(:,9)) );
+fprintf(<span class="string">'Feature 10: %f +/- %f\n'</span>, mean(AUROC_all(:,10)),std(AUROC_all(:,10)) );
+fprintf(<span class="string">'Feature 11: %f +/- %f\n'</span>, mean(AUROC_all(:,11)),std(AUROC_all(:,11)) );
+fprintf(<span class="string">'Feature 12: %f +/- %f\n'</span>, mean(AUROC_all(:,12)),std(AUROC_all(:,12)) );
+fprintf(<span class="string">'Feature 13: %f +/- %f\n'</span>, mean(AUROC_all(:,13)),std(AUROC_all(:,13)) );
+fprintf(<span class="string">'Feature 14: %f +/- %f\n'</span>, mean(AUROC_all(:,14)),std(AUROC_all(:,14)) );
+fprintf(<span class="string">'Feature 15: %f +/- %f\n'</span>, mean(AUROC_all(:,15)),std(AUROC_all(:,15)) );
+fprintf(<span class="string">'Feature 16: %f +/- %f\n'</span>, mean(AUROC_all(:,16)),std(AUROC_all(:,16)) );
+</pre><pre class="codeoutput">AUROC (mean +/- standard deviation) for
+Feature 1: 0.485631 +/- 0.027282
+Feature 2: 0.476492 +/- 0.020072
+Feature 3: 0.480288 +/- 0.012479
+Feature 4: 0.486156 +/- 0.026127
+Feature 5: 0.572127 +/- 0.028778
+Feature 6: 0.522189 +/- 0.038237
+Feature 7: 0.564404 +/- 0.034638
+Feature 8: 0.436370 +/- 0.038132
+Feature 9: 0.298452 +/- 0.036274
+Feature 10: 0.466322 +/- 0.041560
+Feature 11: 0.587915 +/- 0.045843
+Feature 12: 0.746924 +/- 0.031056
+Feature 13: 0.381931 +/- 0.037842
+Feature 14: 0.531750 +/- 0.047747
+Feature 15: 0.870559 +/- 0.028722
+Feature 16: 0.804287 +/- 0.034811
+</pre><img vspace="5" hspace="5" src="hw3_code_nested_01.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_02.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_03.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_04.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_05.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_06.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_07.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_08.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_09.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_10.png" style="width:560px;height:420px;" alt=""> <h2>For 5 different Algorithms<a name="4"></a></h2><pre class="codeinput">AUCglm = zeros(10,1);
+AUCsvm = zeros(10,1);
+AUCcart = zeros(10,1);
+AUCrf = zeros(10,1);
+AUCbt = zeros(10,1);
+
+<span class="keyword">for</span> test_ind = 1:10
+</pre><pre class="codeinput">    fprintf(<span class="string">'Performing Testing using Fold %d of 10 \n'</span>,test_ind);
+    p = 0.9; <span class="comment">% proportion of the dataset for training</span>
+    m = size(data,1);
+
+    <span class="comment">% Circ shift to create new test and training set</span>
+    data_perm = circshift(data_perm,round((1-p)*m),1);
+    class_perm = circshift(class_perm,round((1-p)*m),1);
+
+    X = data_perm(1:round(p*m),:);
+    Y = class_perm(1:round(p*m));
+    Xtest = data_perm(round(p*m)+1:end,:);
+    Ytest = class_perm(round(p*m)+1:end);
+    <span class="comment">% Generalized Linear Model (Logistic Regression)</span>
+
+    glmModel = fitglm(X, Y, <span class="string">'Distribution'</span>, <span class="string">'binomial'</span>, <span class="string">'Link'</span>, <span class="string">'logit'</span>);
+    Yscores = predict(glmModel, Xtest); <span class="comment">% these are the posterior probabilities</span>
+    <span class="comment">% of class 1 for the test data</span>
+
+    <span class="comment">% ... compute the standard ROC curve and the AUROC</span>
+    [Xglm, Yglm, Tglm, AUCglm(test_ind)] = perfcurve(Ytest, Yscores, <span class="string">'true'</span>);
+</pre><pre class="codeoutput">Performing Testing using Fold 1 of 10 
+</pre><pre class="codeoutput">Performing Testing using Fold 2 of 10 
+</pre><pre class="codeoutput">Performing Testing using Fold 3 of 10 
+</pre><pre class="codeoutput">Performing Testing using Fold 4 of 10 
+</pre><pre class="codeoutput">Performing Testing using Fold 5 of 10 
+</pre><pre class="codeoutput">Performing Testing using Fold 6 of 10 
+</pre><pre class="codeoutput">Performing Testing using Fold 7 of 10 
+</pre><pre class="codeoutput">Performing Testing using Fold 8 of 10 
+</pre><pre class="codeoutput">Performing Testing using Fold 9 of 10 
+</pre><pre class="codeoutput">Performing Testing using Fold 10 of 10 
+</pre><h2>Nested CV to choose kernel for SVM<a name="6"></a></h2><pre class="codeinput">    AUCsvm_nested = zeros(10,3);
+    <span class="keyword">for</span> val_ind = 1:10
+        pn = 0.9; <span class="comment">% proportion of data for training</span>
+        mn = size(X,1);
+
+        X = circshift(X,round((1-pn)*mn),1);
+        Y = circshift(Y,round((1-pn)*mn),1);
+
+        X_nested = X(1:round(pn*mn),:);
+        Y_nested = Y(1:round(pn*mn));
+        X_nested_test = X(round(pn*mn)+1:end,:);
+        Y_nested_test = Y(round(pn*mn)+1:end);
+
+
+        <span class="keyword">for</span> k_index = 1:3
+            <span class="comment">% Define K parameter values</span>
+            <span class="keyword">if</span> k_index == 1
+                K = <span class="string">'linear'</span>;
+            <span class="keyword">elseif</span> k_index == 2
+                K = <span class="string">'polynomial'</span>;
+            <span class="keyword">elseif</span> k_index == 3
+                K = <span class="string">'rbf'</span>;
+            <span class="keyword">end</span>
+
+
+            <span class="comment">% Support Vector Machine (SVM)</span>
+
+            svmModel = fitcsvm(X_nested, Y_nested, <span class="string">'Standardize'</span>, true, <span class="string">'KernelFunction'</span>, K);
+            svmModel = fitPosterior(svmModel);
+            [~, Yscores] = predict(svmModel, X_nested_test);
+
+            <span class="comment">% ... compute the standard ROC curve and the AUROC</span>
+            [Xsvm_nested, Ysvm_nested, Tsvm_nested, AUCsvm_nested(val_ind,k_index)] = perfcurve(Y_nested_test, Yscores(:, 2), <span class="string">'true'</span>);
+
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">% Pick the Paramter with Highest Mean AUROC across validation folds</span>
+    AUCsvm_nested_mean = mean(AUCsvm_nested,1);
+    k_best_index = find(AUCsvm_nested_mean == max(AUCsvm_nested_mean));
+
+    <span class="keyword">if</span> k_best_index == 1
+        K_best_svm = <span class="string">'linear'</span>
+    <span class="keyword">elseif</span> k_best_index == 2
+        K_best_svm = <span class="string">'polynomial'</span>
+    <span class="keyword">elseif</span> k_best_index == 3
+        K_best_svm = <span class="string">'rbf'</span>
+    <span class="keyword">end</span>
+
+
+
+    <span class="comment">% Support Vector Machine (SVM) for Test Set</span>
+
+    svmModel = fitcsvm(X, Y, <span class="string">'Standardize'</span>, true, <span class="string">'KernelFunction'</span>, K_best_svm);
+    svmModel = fitPosterior(svmModel);
+    [~, Yscores] = predict(svmModel, Xtest);
+
+    <span class="comment">% ... compute the standard ROC curve and the AUROC</span>
+    [Xsvm, Ysvm, Tsvm, AUCsvm(test_ind)] = perfcurve(Ytest, Yscores(:, 2), <span class="string">'true'</span>);
+</pre><pre class="codeoutput">
+K_best_svm =
+
+rbf
+
+</pre><pre class="codeoutput">
+K_best_svm =
+
+rbf
+
+</pre><pre class="codeoutput">
+K_best_svm =
+
+polynomial
+
+</pre><pre class="codeoutput">
+K_best_svm =
+
+rbf
+
+</pre><pre class="codeoutput">
+K_best_svm =
+
+rbf
+
+</pre><pre class="codeoutput">
+K_best_svm =
+
+polynomial
+
+</pre><pre class="codeoutput">
+K_best_svm =
+
+rbf
+
+</pre><pre class="codeoutput">
+K_best_svm =
+
+rbf
+
+</pre><pre class="codeoutput">
+K_best_svm =
+
+rbf
+
+</pre><pre class="codeoutput">
+K_best_svm =
+
+rbf
+
+</pre><p>Classification Tree (CART)</p><pre class="codeinput">    ctreeModel = fitctree(X, Y);
+    [~, Yscores, ~, ~] = predict(ctreeModel, Xtest);
+
+    <span class="comment">% ... compute the standard ROC curve and the AUROC</span>
+    [Xcart, Ycart, Tcart, AUCcart(test_ind)] = perfcurve(Ytest, Yscores(:, 2), <span class="string">'true'</span>);
+</pre><h2>Nested CV to choose number of trees for RF<a name="8"></a></h2><pre class="codeinput">    AUCrf_nested = zeros(10,5);
+    k_values = [3,10,30,60,100];
+    <span class="keyword">for</span> val_ind = 1:10
+        pn = 0.9; <span class="comment">% proportion of data for training</span>
+        mn = size(X,1);
+
+        X = circshift(X,round((1-pn)*mn),1);
+        Y = circshift(Y,round((1-pn)*mn),1);
+
+        X_nested = X(1:round(pn*mn),:);
+        Y_nested = Y(1:round(pn*mn));
+        X_nested_test = X(round(pn*mn)+1:end,:);
+        Y_nested_test = Y(round(pn*mn)+1:end);
+
+
+        <span class="keyword">for</span> k_index = 1:length(k_values)
+
+            <span class="comment">% Random Forest (RF)</span>
+
+            rfModel = fitensemble(X_nested, Y_nested, <span class="string">'Bag'</span>, k_values(k_index), <span class="string">'Tree'</span>, <span class="string">'Type'</span>, <span class="string">'Classification'</span>);
+            [~, Yscores] = predict(rfModel, X_nested_test);
+
+            <span class="comment">% ... compute the standard ROC curve and the AUROC</span>
+            [Xrf_nested, Yrf_nested, Trf_nested, AUCrf_nested(val_ind,k_index)] = perfcurve(Y_nested_test, Yscores(:, 2), <span class="string">'true'</span>);
+
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">% Pick the Paramter with Highest Mean AUROC across validation folds</span>
+    AUCrf_nested_mean = mean(AUCrf_nested,1);
+    k_best_index = find(AUCrf_nested_mean == max(AUCrf_nested_mean));
+
+    K_best_rf = k_values(k_best_index)
+
+    <span class="comment">% Random Forest (RF)</span>
+
+    rfModel = fitensemble(X, Y, <span class="string">'Bag'</span>, K_best_rf, <span class="string">'Tree'</span>, <span class="string">'Type'</span>, <span class="string">'Classification'</span>);
+    [~, Yscores] = predict(rfModel, Xtest);
+
+
+    <span class="comment">% ... compute the standard ROC curve and the AUROC</span>
+    [Xrf, Yrf, Trf, AUCrf(test_ind)] = perfcurve(Ytest, Yscores(:, 2), <span class="string">'true'</span>);
+</pre><pre class="codeoutput">
+K_best_rf =
+
+   100
+
+</pre><pre class="codeoutput">
+K_best_rf =
+
+    30
+
+</pre><pre class="codeoutput">
+K_best_rf =
+
+   100
+
+</pre><pre class="codeoutput">
+K_best_rf =
+
+   100
+
+</pre><pre class="codeoutput">
+K_best_rf =
+
+   100
+
+</pre><pre class="codeoutput">
+K_best_rf =
+
+   100
+
+</pre><pre class="codeoutput">
+K_best_rf =
+
+   100
+
+</pre><pre class="codeoutput">
+K_best_rf =
+
+    60
+
+</pre><pre class="codeoutput">
+K_best_rf =
+
+   100
+
+</pre><pre class="codeoutput">
+K_best_rf =
+
+   100
+
+</pre><pre class="codeinput">    <span class="comment">% Boosted Trees</span>
+
+    btModel = fitensemble(X, Y, <span class="string">'AdaBoostM1'</span>, 100, <span class="string">'Tree'</span>);
+    [~, Yscores] = predict(btModel, Xtest);
+
+    <span class="comment">% ... compute the standard ROC curve and the AUROC</span>
+    [Xbt, Ybt, Tbt, AUCbt(test_ind)] = perfcurve(Ytest, sigmf(Yscores(:, 2), [1 0]), <span class="keyword">...</span>
+        <span class="string">'true'</span>);
+
+    <span class="comment">% ROC Curves</span>
+    figure;
+    plot(Xglm, Yglm,<span class="string">'--'</span>)
+    hold <span class="string">on</span>
+    plot(Xsvm, Ysvm,<span class="string">'--.'</span>)
+    plot(Xcart, Ycart,<span class="string">'--'</span>)
+    plot(Xrf, Yrf,<span class="string">'--'</span>)
+    plot(Xbt, Ybt)
+    legend(<span class="string">'Logistic Regression'</span>, <span class="string">'Support Vector Machine'</span>, <span class="string">'CART'</span>, <span class="keyword">...</span>
+        <span class="string">'Random Forest'</span>, <span class="string">'Boosted Trees'</span>)
+    xlabel(<span class="string">'false positive rate'</span>);
+    ylabel(<span class="string">'true positive rate'</span>);
+    title_str = [<span class="string">'ROC Curves for Classification Algorithms for Test Set: '</span>,num2str(test_ind)];
+    title(title_str)
+    axis([-0.01,1.01,0,1.01])
+    hold <span class="string">off</span>
+</pre><img vspace="5" hspace="5" src="hw3_code_nested_11.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_12.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_13.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_14.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_15.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_16.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_17.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_18.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_19.png" style="width:560px;height:420px;" alt=""> <img vspace="5" hspace="5" src="hw3_code_nested_20.png" style="width:560px;height:420px;" alt=""> <pre class="codeinput"><span class="keyword">end</span>
+</pre><h2>AUROC<a name="11"></a></h2><pre class="codeinput">fprintf(<span class="string">'AUROC (mean +/- standard deviation) for\n'</span>);
+fprintf(<span class="string">'Logistic Regression: %f +/- %f\n'</span>, mean(AUCglm), std(AUCglm));
+fprintf(<span class="string">'Support Vector Machine: %f +/- %f\n'</span>, mean(AUCsvm), std(AUCsvm));
+fprintf(<span class="string">'CART: %f +/- %f\n'</span>, mean(AUCcart),std(AUCcart));
+fprintf(<span class="string">'Random Forest: %f +/- %f\n'</span>, mean(AUCrf),std(AUCrf));
+fprintf(<span class="string">'Boosted Trees: %f +/- %f\n'</span>, mean(AUCbt),std(AUCbt));
+
+<span class="keyword">return</span>
+</pre><pre class="codeoutput">AUROC (mean +/- standard deviation) for
+Logistic Regression: 0.989013 +/- 0.006315
+Support Vector Machine: 0.999072 +/- 0.001554
+CART: 0.977451 +/- 0.013474
+Random Forest: 0.999723 +/- 0.000461
+Boosted Trees: 0.997696 +/- 0.001729
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2015b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+% Kyle Decker
+% Machine Learning
+% HW 3
+
+close all
+clc
+
+%% Data Loading
+
+f = fopen('letter-recognition.data.txt');
+data0 = textscan(f,'%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f', 20000, 'Delimiter',',');
+fclose(f);
+data_all = cell2mat(data0(:,2:end)); 
+letter = cell2mat(data0{1,1});
+class_all = zeros(size(letter,1),1);
+class_all_B = (letter=='B'); % Classify B vs D
+B_ind = find(class_all_B);
+class_all_D = (letter=='D');
+D_ind = find(class_all_D);
+
+data = cat(1,data_all(B_ind,:),data_all(D_ind,:));
+class = zeros(size(data,1),1);
+class(1:size(B_ind,1))=1; % B = class 1
+class = (class==1); % make logical
+
+
+% data0 = csvread('wine.data.txt');
+% data = data0(:,2:end);
+% class = data0(:,1)>2; % Make binary, wine 1 vs wine 2&3
+
+% Random permutation of the dataset
+rand_i = randperm(size(class,1));
+data_perm = data(rand_i,:);
+class_perm = class(rand_i);
+
+%% Using Features themselves for ROC
+AUROC_all = zeros(10,size(data_perm,2));
+
+for test_ind = 1:10
+    p = 0.9; % proportion of the dataset for training
+    m = size(data,1);
+    
+    % Circ shift to create new test and training set
+    data_perm = circshift(data_perm,round((1-p)*m),1);
+    class_perm = circshift(class_perm,round((1-p)*m),1);
+    
+    X = data_perm(1:round(p*m),:);
+    Y = class_perm(1:round(p*m));
+    Xtest = data_perm(round(p*m)+1:end,:);
+    Ytest = class_perm(round(p*m)+1:end);
+    
+    figure;
+    Yscores = Xtest(:,1);
+    [Xfeat,Yfeat,Tfeat,AUCfeat] = perfcurve(Ytest,Yscores,'true');
+    AUROC_all(test_ind,1) = AUCfeat;
+    plot(Xfeat, Yfeat)
+    hold on
+    for feat_ind = 2:size(Xtest,2)
+        %feat_ind = 1;
+        Yscores = Xtest(:,feat_ind);
+        [Xfeat,Yfeat,Tfeat,AUCfeat] = perfcurve(Ytest,Yscores,'true');
+        AUROC_all(test_ind,feat_ind) = AUCfeat;
+        plot(Xfeat, Yfeat)
+    end
+    xlabel('false positive rate');
+    ylabel('true positive rate');
+    title_str = ['ROC Curves for Individual Features Test Set: ',num2str(test_ind)];
+    title(title_str)
+    axis([-0.01,1.01,0,1.01])
+    legend('F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', ...
+        'F9', 'F10', 'F11', 'F12', 'F13', 'F14', 'F15', 'F16')
+    hold off
+    
+end
+
+fprintf('AUROC (mean +/- standard deviation) for\n');
+fprintf('Feature 1: %f +/- %f\n', mean(AUROC_all(:,1)),std(AUROC_all(:,1)) );
+fprintf('Feature 2: %f +/- %f\n', mean(AUROC_all(:,2)),std(AUROC_all(:,2)) );
+fprintf('Feature 3: %f +/- %f\n', mean(AUROC_all(:,3)),std(AUROC_all(:,3)) );
+fprintf('Feature 4: %f +/- %f\n', mean(AUROC_all(:,4)),std(AUROC_all(:,4)) );
+fprintf('Feature 5: %f +/- %f\n', mean(AUROC_all(:,5)),std(AUROC_all(:,5)) );
+fprintf('Feature 6: %f +/- %f\n', mean(AUROC_all(:,6)),std(AUROC_all(:,6)) );
+fprintf('Feature 7: %f +/- %f\n', mean(AUROC_all(:,7)),std(AUROC_all(:,7)) );
+fprintf('Feature 8: %f +/- %f\n', mean(AUROC_all(:,8)),std(AUROC_all(:,8)) );
+fprintf('Feature 9: %f +/- %f\n', mean(AUROC_all(:,9)),std(AUROC_all(:,9)) );
+fprintf('Feature 10: %f +/- %f\n', mean(AUROC_all(:,10)),std(AUROC_all(:,10)) );
+fprintf('Feature 11: %f +/- %f\n', mean(AUROC_all(:,11)),std(AUROC_all(:,11)) );
+fprintf('Feature 12: %f +/- %f\n', mean(AUROC_all(:,12)),std(AUROC_all(:,12)) );
+fprintf('Feature 13: %f +/- %f\n', mean(AUROC_all(:,13)),std(AUROC_all(:,13)) );
+fprintf('Feature 14: %f +/- %f\n', mean(AUROC_all(:,14)),std(AUROC_all(:,14)) );
+fprintf('Feature 15: %f +/- %f\n', mean(AUROC_all(:,15)),std(AUROC_all(:,15)) );
+fprintf('Feature 16: %f +/- %f\n', mean(AUROC_all(:,16)),std(AUROC_all(:,16)) );
+
+
+
+
+%% For 5 different Algorithms
+AUCglm = zeros(10,1);
+AUCsvm = zeros(10,1);
+AUCcart = zeros(10,1);
+AUCrf = zeros(10,1);
+AUCbt = zeros(10,1);
+
+for test_ind = 1:10
+    fprintf('Performing Testing using Fold %d of 10 \n',test_ind);
+    p = 0.9; % proportion of the dataset for training
+    m = size(data,1);
+    
+    % Circ shift to create new test and training set
+    data_perm = circshift(data_perm,round((1-p)*m),1);
+    class_perm = circshift(class_perm,round((1-p)*m),1);
+    
+    X = data_perm(1:round(p*m),:);
+    Y = class_perm(1:round(p*m));
+    Xtest = data_perm(round(p*m)+1:end,:);
+    Ytest = class_perm(round(p*m)+1:end);
+    % Generalized Linear Model (Logistic Regression)
+    
+    glmModel = fitglm(X, Y, 'Distribution', 'binomial', 'Link', 'logit');
+    Yscores = predict(glmModel, Xtest); % these are the posterior probabilities
+    % of class 1 for the test data
+    
+    % ... compute the standard ROC curve and the AUROC
+    [Xglm, Yglm, Tglm, AUCglm(test_ind)] = perfcurve(Ytest, Yscores, 'true');
+    
+    
+    %% Nested CV to choose kernel for SVM
+   
+    AUCsvm_nested = zeros(10,3);
+    for val_ind = 1:10
+        pn = 0.9; % proportion of data for training
+        mn = size(X,1);
+        
+        X = circshift(X,round((1-pn)*mn),1);
+        Y = circshift(Y,round((1-pn)*mn),1);
+        
+        X_nested = X(1:round(pn*mn),:);
+        Y_nested = Y(1:round(pn*mn));
+        X_nested_test = X(round(pn*mn)+1:end,:);
+        Y_nested_test = Y(round(pn*mn)+1:end);
+        
+        
+        for k_index = 1:3
+            % Define K parameter values
+            if k_index == 1
+                K = 'linear';
+            elseif k_index == 2
+                K = 'polynomial';
+            elseif k_index == 3
+                K = 'rbf';
+            end
+                
+                
+            % Support Vector Machine (SVM)
+            
+            svmModel = fitcsvm(X_nested, Y_nested, 'Standardize', true, 'KernelFunction', K);
+            svmModel = fitPosterior(svmModel);
+            [~, Yscores] = predict(svmModel, X_nested_test);
+            
+            % ... compute the standard ROC curve and the AUROC
+            [Xsvm_nested, Ysvm_nested, Tsvm_nested, AUCsvm_nested(val_ind,k_index)] = perfcurve(Y_nested_test, Yscores(:, 2), 'true');
+            
+        end
+    end
+    
+    % Pick the Paramter with Highest Mean AUROC across validation folds
+    AUCsvm_nested_mean = mean(AUCsvm_nested,1);
+    k_best_index = find(AUCsvm_nested_mean == max(AUCsvm_nested_mean));
+    
+    if k_best_index == 1
+        K_best_svm = 'linear'
+    elseif k_best_index == 2
+        K_best_svm = 'polynomial'
+    elseif k_best_index == 3
+        K_best_svm = 'rbf'
+    end
+                
+    
+    
+    % Support Vector Machine (SVM) for Test Set
+    
+    svmModel = fitcsvm(X, Y, 'Standardize', true, 'KernelFunction', K_best_svm);
+    svmModel = fitPosterior(svmModel);
+    [~, Yscores] = predict(svmModel, Xtest);
+    
+    % ... compute the standard ROC curve and the AUROC
+    [Xsvm, Ysvm, Tsvm, AUCsvm(test_ind)] = perfcurve(Ytest, Yscores(:, 2), 'true');
+    
+    %%
+    % Classification Tree (CART)
+    
+    ctreeModel = fitctree(X, Y);
+    [~, Yscores, ~, ~] = predict(ctreeModel, Xtest);
+    
+    % ... compute the standard ROC curve and the AUROC
+    [Xcart, Ycart, Tcart, AUCcart(test_ind)] = perfcurve(Ytest, Yscores(:, 2), 'true');
+    
+    %% Nested CV to choose number of trees for RF
+   
+    AUCrf_nested = zeros(10,5);
+    k_values = [3,10,30,60,100];
+    for val_ind = 1:10
+        pn = 0.9; % proportion of data for training
+        mn = size(X,1);
+        
+        X = circshift(X,round((1-pn)*mn),1);
+        Y = circshift(Y,round((1-pn)*mn),1);
+        
+        X_nested = X(1:round(pn*mn),:);
+        Y_nested = Y(1:round(pn*mn));
+        X_nested_test = X(round(pn*mn)+1:end,:);
+        Y_nested_test = Y(round(pn*mn)+1:end);
+        
+        
+        for k_index = 1:length(k_values)
+               
+            % Random Forest (RF)
+            
+            rfModel = fitensemble(X_nested, Y_nested, 'Bag', k_values(k_index), 'Tree', 'Type', 'Classification');
+            [~, Yscores] = predict(rfModel, X_nested_test);
+            
+            % ... compute the standard ROC curve and the AUROC
+            [Xrf_nested, Yrf_nested, Trf_nested, AUCrf_nested(val_ind,k_index)] = perfcurve(Y_nested_test, Yscores(:, 2), 'true');
+           
+        end
+    end
+    
+    % Pick the Paramter with Highest Mean AUROC across validation folds
+    AUCrf_nested_mean = mean(AUCrf_nested,1);
+    k_best_index = find(AUCrf_nested_mean == max(AUCrf_nested_mean));
+    
+    K_best_rf = k_values(k_best_index)
+    
+    % Random Forest (RF)
+    
+    rfModel = fitensemble(X, Y, 'Bag', K_best_rf, 'Tree', 'Type', 'Classification');
+    [~, Yscores] = predict(rfModel, Xtest);
+    
+    
+    % ... compute the standard ROC curve and the AUROC
+    [Xrf, Yrf, Trf, AUCrf(test_ind)] = perfcurve(Ytest, Yscores(:, 2), 'true');
+    
+    %%
+    
+    % Boosted Trees
+    
+    btModel = fitensemble(X, Y, 'AdaBoostM1', 100, 'Tree');
+    [~, Yscores] = predict(btModel, Xtest);
+    
+    % ... compute the standard ROC curve and the AUROC
+    [Xbt, Ybt, Tbt, AUCbt(test_ind)] = perfcurve(Ytest, sigmf(Yscores(:, 2), [1 0]), ...
+        'true');
+    
+    % ROC Curves
+    figure;
+    plot(Xglm, Yglm,'REPLACE_WITH_DASH_DASH')
+    hold on
+    plot(Xsvm, Ysvm,'REPLACE_WITH_DASH_DASH.')
+    plot(Xcart, Ycart,'REPLACE_WITH_DASH_DASH')
+    plot(Xrf, Yrf,'REPLACE_WITH_DASH_DASH')
+    plot(Xbt, Ybt)
+    legend('Logistic Regression', 'Support Vector Machine', 'CART', ...
+        'Random Forest', 'Boosted Trees')
+    xlabel('false positive rate');
+    ylabel('true positive rate');
+    title_str = ['ROC Curves for Classification Algorithms for Test Set: ',num2str(test_ind)];
+    title(title_str)
+    axis([-0.01,1.01,0,1.01])
+    hold off
+   
+end
+
+%% AUROC
+
+fprintf('AUROC (mean +/- standard deviation) for\n');
+fprintf('Logistic Regression: %f +/- %f\n', mean(AUCglm), std(AUCglm));
+fprintf('Support Vector Machine: %f +/- %f\n', mean(AUCsvm), std(AUCsvm));
+fprintf('CART: %f +/- %f\n', mean(AUCcart),std(AUCcart));
+fprintf('Random Forest: %f +/- %f\n', mean(AUCrf),std(AUCrf));
+fprintf('Boosted Trees: %f +/- %f\n', mean(AUCbt),std(AUCbt));
+
+return
+##### SOURCE END #####
+--></body></html>
